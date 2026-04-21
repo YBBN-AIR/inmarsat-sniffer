@@ -89,11 +89,10 @@ static const channel_def_t channels_3f5[] = {
     { 1546853237.0, CHAN_AERO_8400, 14 },
 };
 
-/* Alphasat / Inmarsat-4A F4 (25E, EMEA/IOR)
- * Aero frequencies from SDRReceiver 25E config.
- * STD-C EGC from thebaldgeek.github.io/stdc.html (1537.10 MHz). */
+/* I4-AF1 (25E, IOR) -- Indian Ocean
+ * Frequencies from SDRReceiver 25E config. */
 static const channel_def_t channels_af1[] = {
-    { 1537100000.0, CHAN_STDC_EGC,   0 },
+    { 1537950000.0, CHAN_STDC_EGC,   0 },
 
     /* Aero 600 baud channels */
     { 1545005146.0, CHAN_AERO_600,  1 },
@@ -129,6 +128,30 @@ static const channel_def_t channels_af1[] = {
     { 1546168300.0, CHAN_AERO_8400, 25 },
     { 1546173430.0, CHAN_AERO_8400, 26 },
     { 1546178430.0, CHAN_AERO_8400, 27 },
+};
+
+/* I4-AF2 (84E, MOR/IOR-East) -- Middle East / Asia-Pacific fringe
+ * Frequencies from SDRReceiver 84E config. No STD-C EGC confirmed --
+ * placeholder freq used; verify against live signal. */
+static const channel_def_t channels_af2[] = {
+    /* STD-C EGC -- UNVERIFIED placeholder, confirm before use */
+    { 1537950000.0, CHAN_STDC_EGC,   0 },
+
+    /* Aero 600 baud channels */
+    { 1545003000.0, CHAN_AERO_600,  1 },
+    { 1545080000.0, CHAN_AERO_600,  2 },
+    { 1545085000.0, CHAN_AERO_600,  3 },
+    { 1545090000.0, CHAN_AERO_600,  4 },
+    { 1545160000.0, CHAN_AERO_600,  5 },
+    { 1545165000.0, CHAN_AERO_600,  6 },
+    { 1545185000.0, CHAN_AERO_600,  7 },
+    { 1545190000.0, CHAN_AERO_600,  8 },
+
+    /* Aero 10500 baud channels */
+    { 1546040000.0, CHAN_AERO_10500,  9 },
+    { 1546090000.0, CHAN_AERO_10500, 10 },
+    { 1546105000.0, CHAN_AERO_10500, 11 },
+    { 1546120000.0, CHAN_AERO_10500, 12 },
 };
 
 /* I4-F1 (143.5E, POR) -- Pacific Ocean
@@ -175,13 +198,6 @@ static const satellite_t satellites[] = {
         .num_channels = ARRAY_SIZE(channels_4f3),
         .freq_min = 1537700000.0,
         .freq_max = 1546186430.0,
-        /* RTL-SDR: SDRReceiver sdr_98W.ini; proven live here.
-         * SDRplay:  extrapolated from the AF1 SDRplay config (same Inmarsat
-         *           generation and L-band span); proven live here.
-         * HackRF:   proven live here. */
-        .preferred_rate_rtl     = 1536000.0,
-        .preferred_rate_sdrplay = 3072000.0,
-        .preferred_rate_hackrf  = 6000000.0,
     },
     {
         .name = "I3-F5",
@@ -193,27 +209,28 @@ static const satellite_t satellites[] = {
         .num_channels = ARRAY_SIZE(channels_3f5),
         .freq_min = 1541450000.0,
         .freq_max = 1546853237.0,
-        /* RTL-SDR: SDRReceiver sdr_54W_all.ini — 1.92 MHz covers the wider
-         *          3F5 span (1.84 MHz) on RTL-SDR's native-clean rate ladder. */
-        .preferred_rate_rtl     = 1920000.0,
-        .preferred_rate_sdrplay = 3072000.0,
-        .preferred_rate_hackrf  = 6000000.0,
     },
     {
-        .name = "Alphasat (I-4A F4)",
+        .name = "I4-AF1",
         .designator = "AF1",
         .position = 25.0,
-        .region = "EMEA",
-        .stdc_egc_freq = 1537100000.0,
+        .region = "IOR",
+        .stdc_egc_freq = 1537950000.0,
         .channels = channels_af1,
         .num_channels = ARRAY_SIZE(channels_af1),
-        .freq_min = 1537100000.0,
+        .freq_min = 1537950000.0,
         .freq_max = 1546178430.0,
-        /* RTL-SDR: SDRReceiver sdr_25E.ini.
-         * SDRplay:  SDRReceiver sdr_25E_sdrplay.ini. */
-        .preferred_rate_rtl     = 1536000.0,
-        .preferred_rate_sdrplay = 3072000.0,
-        .preferred_rate_hackrf  = 6000000.0,
+    },
+    {
+        .name = "I4-AF2",
+        .designator = "AF2",
+        .position = 84.0,
+        .region = "MOR",
+        .stdc_egc_freq = 1537950000.0,   /* UNVERIFIED placeholder */
+        .channels = channels_af2,
+        .num_channels = ARRAY_SIZE(channels_af2),
+        .freq_min = 1537950000.0,
+        .freq_max = 1546123000.0,
     },
     {
         .name = "I4-F1",
@@ -234,17 +251,15 @@ const satellite_t *satellite_lookup(const char *designator) {
         if (strcasecmp(satellites[i].designator, designator) == 0)
             return &satellites[i];
     }
-    /* Geographic position + common-name aliases */
+    /* Geographic position aliases (matches SDRReceiver naming) */
     struct { const char *alias; const char *designator; } aliases[] = {
         { "98W",      "4F3" },  /* Inmarsat 4-F3 Americas */
         { "54W",      "3F5" },  /* Inmarsat 3-F5 Atlantic */
-        { "25E",      "AF1" },  /* Alphasat / I-4A F4 EMEA */
-        { "AF4",      "AF1" },  /* canonical — Inmarsat designates as I-4A F4 */
-        { "4AF4",     "AF1" },
-        { "alphasat", "AF1" },
+        { "25E",      "AF1" },  /* Alphasat / I-4 AF1 Indian Ocean */
+        { "84E",      "AF2" },  /* Inmarsat 4-AF2 Middle East */
         { "143E",     "F1"  },  /* Inmarsat 4-F1 Pacific */
         { "143.5E",   "F1"  },
-        { "4F1",      "F1"  },
+        { "alphasat", "AF1" },
     };
     for (size_t i = 0; i < ARRAY_SIZE(aliases); i++) {
         if (strcasecmp(aliases[i].alias, designator) == 0) {
